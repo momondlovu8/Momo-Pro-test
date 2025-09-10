@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Momo  Pro Test</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#0f172a,#1e293b);
+    font-family:Segoe UI,Helvetica,Arial,sans-serif;
+  }
+  .chat-container{
+    width:400px;
+    height:600px;
+    background:rgba(30,41,59,.7);
+    backdrop-filter:blur(10px);
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .chat-header{
+    background:rgba(15,23,42,.8);
+    color:#e2e8f0;
+    padding:20px;
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+  }
+  .chat-messages{
+    flex:1;
+    overflow-y:auto;
+    padding:20px;
+  }
+  .message{
+    margin-bottom:15px;
+    display:flex;
+    align-items:flex-start;
+    animation:fadeIn .3s ease;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .message.user{justify-content:flex-end}
+  .message-content{
+    max-width:70%;
+    padding:12px 18px;
+    border-radius:18px;
+    font-size:14px;
+    line-height:1.4;
+    box-shadow:0 4px 6px rgba(0,0,0,.1);
+  }
+  .message.bot .message-content{
+    background:rgba(30,64,175,.7);
+    color:#e2e8f0;
+    border-bottom-left-radius:5px;
+    backdrop-filter:blur(5px);
+  }
+  .message.user .message-content{
+    background:rgba(30,41,59,.9);
+    color:#cbd5e1;
+    border-bottom-right-radius:5px;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .chat-input-container{
+    display:flex;
+    gap:10px;
+    padding:20px;
+    background:rgba(15,23,42,.8);
+  }
+  .chat-input{
+    flex:1;
+    padding:12px 18px;
+    border:none;
+    border-radius:25px;
+    font-size:14px;
+    outline:none;
+    background:rgba(30,41,59,.7);
+    color:#e2e8f0;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .chat-input::placeholder{color:#94a3b8}
+  .send-button{
+    width:45px;
+    height:45px;
+    border:none;
+    border-radius:50%;
+    background:#3b82f6;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .2s;
+  }
+  .send-button:hover{background:#2563eb}
+  .typing-indicator{
+    display:none;
+    padding:12px 18px;
+    background:rgba(30,64,175,.7);
+    color:#e2e8f0;
+    border-radius:18px;
+    border-bottom-left-radius:5px;
+    font-size:14px;
+    margin:0 20px 10px;
+    backdrop-filter:blur(5px);
+  }
+  .typing-indicator span{
+    display:inline-block;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#e2e8f0;
+    margin:0 2px;
+    animation:typing 1.4s infinite;
+  }
+  .typing-indicator span:nth-child(2){animation-delay:.2s}
+  .typing-indicator span:nth-child(3){animation-delay:.4s}
+  @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-10px)}}
+</style>
+</head>
+<body>
+<div class="chat-container">
+  <div class="chat-header">Pro Test</div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="message bot">
+      <div class="message-content">Hello! I’m Pro Test, powered by Momo intel. Ask me anything.</div>
+    </div>
+  </div>
+  <div class="typing-indicator" id="typingIndicator">
+    Pro Test is typing<span></span><span></span><span></span>
+  </div>
+  <div class="chat-input-container">
+    <input id="chatInput" class="chat-input" type="text" placeholder="Type your message…" autocomplete="off"/>
+    <button id="sendButton" class="send-button">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+/* ======  CONFIG  ====== */
+const OPENROUTER_KEY = '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';
+const MODEL          = 'deepseek/deepseek-chat-v3.1:free';
+const YOUR_SITE_URL  = window.location.href;
+const YOUR_SITE_NAME = 'Pro Test';
+
+/* ======  SHORTCUTS  ====== */
+const $msgs   = document.getElementById('chatMessages');
+const $input  = document.getElementById('chatInput');
+const $btn    = document.getElementById('sendButton');
+const $typing = document.getElementById('typingIndicator');
+
+/* ======  UI  ====== */
+const addMsg = (text, sender) => {
+  const row = document.createElement('div');
+  row.className = `message ${sender}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'message-content';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  $msgs.appendChild(row);
+  $msgs.scrollTop = $msgs.scrollHeight;
+};
+const thinking = (on) => {
+  $typing.style.display = on ? 'block' : 'none';
+  $msgs.scrollTop = $msgs.scrollHeight;
+};
+
+/* ======  API CALL  ====== */
+async function askDeepSeek(prompt) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'HTTP-Referer': YOUR_SITE_URL,
+      'X-Title': YOUR_SITE_NAME,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  const json = await res.json();
+  return json.choices[0].message.content;
+}
+
+/* ======  SEND FLOW  ====== */
+async function send() {
+  const text = $input.value.trim();
+  if (!text) return;
+  addMsg(text, 'user');
+  $input.value = '';
+  thinking(true);
+  try {
+    const reply = await askDeepSeek(text);
+    thinking(false);
+    addMsg(reply, 'bot');
+  } catch (e) {
+    thinking(false);
+    addMsg(`Sorry: ${e.message}`, 'bot');
+  }
+}
+
+/* ======  EVENTS  ====== */
+$btn.addEventListener('click', send);
+$input.addEventListener('keydown', e => e.key === 'Enter' && send());
+window.addEventListener('DOMContentLoaded', () => $input.focus());
+</script>
+</body>
+</html>
